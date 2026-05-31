@@ -14,7 +14,7 @@ Returns (Er, rate) ready to plot.
 
 Example
 -------
-    from get_detected_spectrum import get_detected_spectrum, plot_spectrum
+    from get_detected_spectrum import get_detected_spectrum
 
     # NR ideal
     Er, rate = get_detected_spectrum(
@@ -28,8 +28,6 @@ Example
         nu_sources=['pp', 'Be7_861', 'pep', 'N13', 'O15', 'F17'],
         bkgd_sources=['Kr85', 'Rn222', 'nubb'],
         mode='realistic', detector='ideal Ethrd1keV')
-
-    plot_spectrum(Er, rate)
 """
 
 import numpy as np
@@ -38,30 +36,37 @@ import glob
 import astropy.units as u
 from scipy.interpolate import interp1d
 
-try:
-    from plot_setup import setup_cdfpdf_ax
-    _HAS_PLOT_SETUP = True
-except ImportError:
-    _HAS_PLOT_SETUP = False
-
-import matplotlib.pyplot as plt
 from cross_section_to_rate import nr_rate, er_rate
 
-_RATE_UNIT = 1 / u.tonne / u.yr / u.keV
+_RATE_UNIT       = 1 / u.tonne / u.yr / u.keV
+_BKGD_FOLDER    = 'measured_spectrum'
 
-
+def _read(filepath):
+    """Read a two-column spectrum file, skipping all non-numeric header lines."""
+    with open(filepath) as f:
+        lines = f.readlines()
+    skiprows = 0
+    for line in lines:
+        try:
+            float(line.split()[0])
+            break
+        except (ValueError, IndexError):
+            skiprows += 1
+    data = np.loadtxt(filepath, skiprows=skiprows)
+    return data[:, 0], data[:, 1]
 # ---------------------------------------------------------------------------
 # Read background (already normalized)
 # ---------------------------------------------------------------------------
 
-def _read_background(source, target, folder='neutrino-electron_el'):
-    fpath = os.path.join(folder, 'measured_spectrum',
-                         f'{source}-{target}_pdf.txt')
+def _read_background(source, target, folder=_BKGD_FOLDER):
+    fpath = os.path.join(folder, f'{source}-{target}_pdf.txt')
     if not os.path.exists(fpath):
-        raise FileNotFoundError(fpath)
-    data = np.loadtxt(fpath, skiprows=2)
-    Er   = data[:, 0] * u.keV
-    rate = data[:, 1] * _RATE_UNIT
+        print(f'measured_spectrum {source} not applicable for {target}')
+        return None, None
+    print(fpath)
+    Er_arr, rate_arr = _read(fpath)
+    Er   = Er_arr   * u.keV
+    rate = rate_arr * _RATE_UNIT
     if target == 'Ar' and source == 'Rn222':
         rate = rate / 4000
         Er   = Er   * 1000
@@ -184,7 +189,6 @@ def get_detected_spectrum(
     if mode == 'realistic' and detector is None:
         raise ValueError("detector is required for mode='realistic'")
 
-    # default Er range and interaction by channel
     if Er_range_keV is None:
         Er_range_keV = (0.001, 1000) if channel == 'NR' else (0.001, 5000)
     if interaction is None:
@@ -193,7 +197,6 @@ def get_detected_spectrum(
     Er_common = np.logspace(np.log10(Er_range_keV[0]),
                             np.log10(Er_range_keV[1]), Er_bins) * u.keV
 
-    # --- load spectra ---
     spectra = []
 
     if channel == 'NR':
@@ -208,15 +211,14 @@ def get_detected_spectrum(
                                   folder=ER_folder, metallicity=metallicity)
             spectra.append((Er, rate))
         for source in (bkgd_sources or []):
-            Er, rate = _read_background(source, target, folder=ER_folder)
-            spectra.append((Er, rate))
+            Er, rate = _read_background(source, target)
+            if Er is not None:
+                spectra.append((Er, rate))
     else:
         raise ValueError(f"channel must be 'NR' or 'ER', got '{channel}'")
 
-    # --- sum ---
     Er, rate = _sum(spectra, Er_common)
 
-    # --- smear + efficiency ---
     if mode == 'realistic':
         Er, rate = _smear(Er, rate, target, sigma_percentage)
         eff      = _efficiency(Er, detector, interaction,
@@ -224,86 +226,3 @@ def get_detected_spectrum(
         rate     = rate * eff
 
     return Er, rate
-
-
-# ---------------------------------------------------------------------------
-# Plot
-# ---------------------------------------------------------------------------
-
-def plot_spectrum(Er, rate, label=None, ax=None, color='black', ls='-',
-                  xlims=None, ylims=None, xlabel=None, save_path=None):
-    """
-    Plot a spectrum. Pass ax to overlay on an existing figure.
-    Returns (fig, ax).
-    """
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 4))
-    else:
-        fig = ax.get_figure()
-
-    ax.loglog(Er, rate, color=color, ls=ls,
-              **(dict(label=label) if label else {}))
-
-    _xl = xlabel or 'Recoil energy Er [keV]'
-    _yl = r'$d\mathcal{R}/dE_r$  [ton$^{-1}$ yr$^{-1}$ keV$^{-1}$]'
-
-    if _HAS_PLOT_SETUP:
-        ax = setup_cdfpdf_ax(ax, '', _xl, '', True, 'pdf', 13, 13,
-                             vlines=[], hlines=[],
-                             xlims=list(xlims) if xlims else [0, 0],
-                             ylims=list(ylims) if ylims else [0, 0],
-                             log=[0, 0])
-    else:
-        ax.set_xlabel(_xl, fontsize=13)
-        ax.set_ylabel(_yl, fontsize=13)
-        ax.set_xscale('log'); ax.set_yscale('log')
-        if xlims: ax.set_xlim(*xlims)
-        if ylims: ax.set_ylim(*ylims)
-        ax.grid(True)
-
-    if label:
-        ax.legend(fontsize=11)
-    plt.tight_layout()
-    if save_path:
-        os.makedirs(os.path.dirname(save_path) or '.', exist_ok=True)
-        fig.savefig(save_path, bbox_inches='tight')
-    plt.show()
-    return fig, ax
-
-
-# ---------------------------------------------------------------------------
-# CLI demo
-# ---------------------------------------------------------------------------
-if __name__ == '__main__':
-
-    # NR, Xe, multiple detectors
-    fig, ax = plt.subplots(figsize=(6, 4))
-    for detector, ls in zip(['Xe100t-5', 'G3', 'LZ', 'Xe1t'], ['--', ':', '-.', '-']):
-        Er, rate = get_detected_spectrum(
-            target='Xe', channel='NR',
-            nu_sources=['pp', 'Be7_384', 'Be7_861', 'pep',
-                        'N13', 'O15', 'F17', '8B', 'hep',
-                        'dsnb', 'atmNu_SURF_avg'],
-            mode='realistic', detector=detector)
-        plot_spectrum(Er, rate, label=detector, ls=ls, ax=ax,
-                      xlims=(0.001, 90), ylims=(1e-5, 1e7),
-                      xlabel='Nucleus recoil energy Er [keV]')
-
-    # ER, Ar, neutrinos vs backgrounds
-    fig, ax = plt.subplots(figsize=(6, 4))
-    for detector, ls in zip(['ideal Ethrd100keV', 'ideal Ethrd40keV', 'ideal Ethrd1keV'],
-                             ['--', ':', '-']):
-        Er_nu, rate_nu = get_detected_spectrum(
-            target='Ar', channel='ER',
-            nu_sources=['pp', 'Be7_384', 'Be7_861', 'pep', 'N13', 'O15', 'F17'],
-            mode='realistic', detector=detector)
-        Er_bk, rate_bk = get_detected_spectrum(
-            target='Ar', channel='ER',
-            nu_sources=[],
-            bkgd_sources=['Kr85', 'Rn222', 'nubb'],
-            mode='realistic', detector=detector)
-        ax.loglog(Er_bk, rate_bk, color='grey',  ls=ls)
-        plot_spectrum(Er_nu, rate_nu, label=detector.split()[-1],
-                      ls=ls, ax=ax, color='black',
-                      xlims=(1e-3, 3000), ylims=(1e-5, 200),
-                      xlabel='Electron recoil energy Er [keV]')

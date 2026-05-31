@@ -30,7 +30,17 @@ _ATM_FOLDER   = 'atm_neutrino_flux'
 
 
 def _read(filepath):
-    data = np.loadtxt(filepath, skiprows=1)
+    """Read a two-column spectrum file, skipping all non-numeric header lines."""
+    with open(filepath) as f:
+        lines = f.readlines()
+    skiprows = 0
+    for line in lines:
+        try:
+            float(line.split()[0])
+            break
+        except (ValueError, IndexError):
+            skiprows += 1
+    data = np.loadtxt(filepath, skiprows=skiprows)
     return data[:, 0], data[:, 1]
 
 

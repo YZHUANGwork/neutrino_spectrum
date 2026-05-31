@@ -287,10 +287,10 @@ if __name__ == '__main__':
     NR_SOURCES = ['pp', 'Be7_384', 'Be7_861', 'pep',
                   'N13', 'O15', 'F17', '8B', 'hep', 'atmNu_SURF_avg']
     for source in NR_SOURCES:
-        compute_NR_unnormed(source, NR_TARGET, plot=False)
+        compute_NR_unnormed(source, NR_TARGET, plot=False,overwrite = True)
 
     # ER
     ER_TARGET  = 'Xe'
     ER_SOURCES = ['pp', 'Be7_384', 'Be7_861', 'pep', 'N13', 'O15', 'F17']
     for source in ER_SOURCES:
-        compute_ER_unnormed(source, ER_TARGET, flavor='both', plot=False)
+        compute_ER_unnormed(source, ER_TARGET, flavor='both', plot=False,overwrite = True)
