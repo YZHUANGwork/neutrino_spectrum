@@ -4,6 +4,8 @@ Computes neutrino-nucleus (NR) and neutrino-electron (ER) elastic scattering
 rate spectra for liquid noble gas detectors (Xe, Ar, He).
 
 ---
+Result
+![NR Xe ideal](figures/NR_Xe_ideal.png)![ER Xe ideal](figures/ER_Xe_ideal.png)
 
 ## Repository structure
 
@@ -34,7 +36,7 @@ This repository expects the following sibling directories:
 ```
 ~/projects/
 ├── neutrino_spectrum/      ← this repo
-├── WIMP_spectrum/          ← https://github.com/yourname/WIMP_spectrum
+├── wimp_spectrum/          ← https://github.com/YZHUANGwork/WIMP_spectrum
 └── detector_efficiency/    ← https://github.com/yourname/detector_efficiency
 ```
 
@@ -154,7 +156,7 @@ plot_spectrum(Er, rate)
 
 ---
 
-![NR Xe ideal](figures/NR_Xe_ideal.png)![ER Xe ideal](figures/ER_Xe_ideal.png)
+
 ## Dependencies
 
 ```
