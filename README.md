@@ -1,4 +1,3 @@
-[README (1).md](https://github.com/user-attachments/files/28428821/README.1.md)
 # neutrino_spectrum
 
 Computes neutrino-nucleus (NR) and neutrino-electron (ER) elastic scattering
@@ -11,7 +10,7 @@ rate spectra for liquid noble gas detectors (Xe, Ar, He).
 ```
 neutrino_spectrum/
 ├── solar_neutrino_flux/          flux shape files [E, dN/dE] for pp, hep, 8B, N13, O15, F17
-├── atm_neutrino_flux/            atmospheric neutrino flux files by site and model
+├── atm_neutrino_flux/            atmospheric neutrino flux files by site and model #
 ├── neutrino-Nucleus_el/          output: NR unnormalized cross-section files (generated)
 ├── neutrino-electron_el/         output: ER unnormalized cross-section files (generated)
 ├── measured_spectrum/            pre-normalized background spectra: Kr85, Rn222, nubb
@@ -155,6 +154,7 @@ plot_spectrum(Er, rate)
 
 ---
 
+![NR Xe ideal](figures/NR_Xe_ideal.png)![ER Xe ideal](figures/ER_Xe_ideal.png)
 ## Dependencies
 
 ```
