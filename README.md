@@ -38,7 +38,7 @@ This repository expects the following sibling directories:
 ├── neutrino_spectrum/      ← this repo
 ├── wimp_spectrum/          ← https://github.com/YZHUANGwork/WIMP_spectrum
 └── detector_efficiency/    ← https://github.com/YZHUANGwork/detector_efficiency
-└── phase-split/           ← https://github.com/YZHUANGwork/phase-split
+└── phasor_decomp/          ← https://github.com/YZHUANGwork/phasor_decomp
 ```
 
 Detector efficiency files are read from `../detector_efficiency/` by default.
